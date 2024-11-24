@@ -1,23 +1,23 @@
-import React, {useState} from 'react';
-import {Button, Input, message, Space, Typography} from 'antd';
+import React, { useState } from 'react';
+import { Button, Input, message, Space, Typography } from 'antd';
 
 const { Title } = Typography;
 
-const App = () => {
-    const alphabetCyrillic = 'abcdefghijklmnopqrstuvwxyzабвгдежзийклмнопрстуфхцчшщъыьэюяё';
-    const alphabetLatin = 'abcdefghijklmnopqrstuvwxyz';
+const App: React.FC = () => {
+    const alphabetCyrillic: string = 'abcdefghijklmnopqrstuvwxyzабвгдежзийклмнопрстуфхцчшщъыьэюяё';
+    const alphabetLatin: string = 'abcdefghijklmnopqrstuvwxyz';
     const [messageApi, contextHolder] = message.useMessage();
     const [text, setText] = useState<string>('');
     const [shift, setShift] = useState<number>(0);
     const [result, setResult] = useState<string>('');
-    const groupSize = 5;
+    const groupSize: number = 5;
 
     /**
      * Обрабатывает изменение значения сдвига.
      * @param {React.ChangeEvent<HTMLInputElement>} e - Событие изменения.
      */
-    const handleShiftChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newShift = parseInt(e.target.value, 10);
+    const handleShiftChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+        const newShift: number = parseInt(e.target.value, 10);
         if (!isNaN(newShift)) {
             setShift(newShift < 0 ? 0 : newShift > 32 ? 32 : newShift);
         } else {
@@ -33,8 +33,8 @@ const App = () => {
      * Удаляет все небуквенные символы и приводит текст к нижнему регистру.
      * @param {React.ChangeEvent<HTMLTextAreaElement>} e - Событие изменения.
      */
-    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newText = e.target.value
+    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+        const newText: string = e.target.value
             .replace(/ё/g, 'е')
             .replace(/[^a-zA-Zа-яА-Я]/g, '')
             .toLocaleLowerCase();
@@ -44,16 +44,16 @@ const App = () => {
     /**
      * Шифрует текст с использованием шифра Цезаря.
      */
-    const handleEncrypt = () => {
-        const encryptedText = caesarCipher(text, shift, true);
+    const handleEncrypt = (): void => {
+        const encryptedText: string = caesarCipher(text, shift, true);
         setResult(formatOutput(encryptedText));
     };
 
     /**
      * Расшифровывает текст с использованием шифра Цезаря.
      */
-    const handleDecrypt = () => {
-        const decryptedText = caesarCipher(result, shift, false);
+    const handleDecrypt = (): void => {
+        const decryptedText: string = caesarCipher(result, shift, false);
         setText(decryptedText);
         setResult('');
     };
@@ -66,15 +66,15 @@ const App = () => {
      * @returns {string} - Зашифрованный или расшифрованный текст.
      */
     const caesarCipher = (text: string, shift: number, encrypt: boolean): string => {
-        const alphabet = alphabetCyrillic.includes(text[0]) ? alphabetCyrillic : alphabetLatin;
+        const alphabet: string = alphabetCyrillic.includes(text[0]) ? alphabetCyrillic : alphabetLatin;
 
-        const normalizedShift = alphabet === alphabetCyrillic ? shift % 33 : shift % 27;
-        let result = '';
+        const normalizedShift: number = alphabet === alphabetCyrillic ? shift % 33 : shift % 27;
+        let result: string = '';
 
         for (let i = 0; i < text.length; i++) {
-            const index = alphabet.indexOf(text[i]);
+            const index: number = alphabet.indexOf(text[i]);
             if (index !== -1) {
-                const newIndex = (index + (encrypt ? normalizedShift : -normalizedShift + alphabet.length)) % alphabet.length;
+                const newIndex: number = (index + (encrypt ? normalizedShift : -normalizedShift + alphabet.length)) % alphabet.length;
                 result += alphabet[newIndex];
             }
         }
@@ -94,7 +94,7 @@ const App = () => {
     /**
      * Очищает текст, сдвиг и результат.
      */
-    const handleClear = () => {
+    const handleClear = (): void => {
         setText('');
         setShift(0);
         setResult('');
@@ -102,18 +102,18 @@ const App = () => {
 
     /**
      * Взлом зашифрованного русскоязычного текста методом наименьших квадратов.
-     * @param {string} encryptedText - Зашифрованный текст.
+     * * @param {string} encryptedText - Зашифрованный текст.
      * @returns {number} - Предполагаемый сдвиг.
      */
     const crackCaesarCipher = (encryptedText: string): number => {
-        const frequency = {};
+        const frequency: { [key: string]: number } = {};
         for (const char of encryptedText) {
             if (/[а-яё]/i.test(char)) {
                 frequency[char] = (frequency[char] || 0) + 1;
             }
         }
         // Находим букву с максимальной частотой
-        const maxChar = Object.keys(frequency).reduce((a, b) => frequency[a] > frequency[b] ? a : b);
+        const maxChar: string = Object.keys(frequency).reduce((a, b) => frequency[a] > frequency[b] ? a : b);
         // Предполагаем, что буква 'е' наиболее частая в русском языке
         return (alphabetCyrillic.indexOf(maxChar) - alphabetCyrillic.indexOf('е') + 33) % 33;
     };
@@ -162,7 +162,7 @@ const App = () => {
                     />
                 </Input.Group>
                 <Button onClick={() => {
-                    const crackedShift = crackCaesarCipher(result);
+                    const crackedShift: number = crackCaesarCipher(result);
                     messageApi.open({
                         type: "info",
                         content:`Предполагаемый сдвиг: ${crackedShift}`,
