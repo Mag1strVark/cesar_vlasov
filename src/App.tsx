@@ -46,13 +46,13 @@ const lettersFrequency = {
 
 const App: React.FC = () => {
     const [inputText, setInputText] = useState<string>(''); // Состояние для введенного текста
-    const [key, setKey] = useState<string>(''); // Состояние для ключа шифрования/расшифрования
+    const [key, setKey] = useState<string>('0'); // Состояние для ключа шифрования/расшифрования
     const [outputText, setOutputText] = useState<string>(''); // Состояние для результата операции
     const [hackKey, setHackKey] = useState<string>(''); // Состояние для оцененного ключа при взломе
     const [error, setError] = useState<string>(''); // Состояние для ошибок
 
     // Функция для очистки текста: замена ё на е, удаление небуквенных символов, приведение к нижнему регистру
-    const clearText = (text: string) => {
+    const clearText = (text: string): string => {
         return text
             .replace(/[ёЁ]/g, 'е') // Заменяем ё на е
             .replace(/[^а-яА-Яa-zA-Z]/g, '') // Убираем все небуквенные символы
@@ -60,15 +60,20 @@ const App: React.FC = () => {
     };
 
     // Обработчик изменения текста в поле ввода
-    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const cleanedText = clearText(e.target.value); // Очищаем текст при вводе
-        setInputText(cleanedText); // Обновляем состояние с очищенным текстом
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+        setInputText(e.target.value);
     };
 
+    const parseOffset = (key: string): string => {
+        const formatKey = key.match(/\-?\d+/g)
+        return formatKey ? formatKey.join('') : ''
+    }
+
     // Функция для шифрования или расшифрования текста
-    const encryptOrDecrypt = (isEncryption: boolean) => {
-        const cleanedText = inputText; // Берем очищенный текст
-        const offset = parseInt(key);
+    const encryptOrDecrypt = (isEncryption: boolean): void => {
+        const cleanedText = clearText(inputText); // Берем очищенный текст
+        const formatKey = Number(parseOffset(key))
+        const offset = ((formatKey % 33) + 33) % 33
         if (offset === -1) {
             return;
         }
@@ -88,10 +93,10 @@ const App: React.FC = () => {
                 let newIndex;
                 if (isEncryption) {
                     // Шифрование: сдвигаем индекс по алфавиту
-                    newIndex = (elementIndex + offset) % dictionaryLength; // Используйте offset, чтобы сделать сдвиг
+                    newIndex = (elementIndex + offset) % dictionaryLength;
                 } else {
                     // Расшифрование: сдвигаем индекс обратно
-                    newIndex = (elementIndex - offset + dictionaryLength) % dictionaryLength; // Используйте offset для расшифровки
+                    newIndex = (elementIndex - offset + dictionaryLength) % dictionaryLength; 
                 }
                 result += usedDict[newIndex]; // Добавляем зашифрованный/расшифрованный символ к результату
             } else {
@@ -107,13 +112,12 @@ const App: React.FC = () => {
     };
 
     // Функция для взлома шифра
-    const hackCipher = () => {
-        const cleanedText = inputText; // Берем очищенный текст
+    const hackCipher = (): void => {
+        const cleanedText = clearText(inputText); // Берем очищенный текст
         if (cleanedText.length === 0) {
             setError('Текст слишком короткий для взлома!'); // Устанавливаем ошибку, если текст пустой
             return;
         }
-
 
         // Проверяем на наличие английских букв
         if (englishLetters.some(letter => cleanedText.includes(letter))) {
@@ -133,7 +137,7 @@ const App: React.FC = () => {
         }
 
         // Подсчитываем частоту букв в введенном тексте
-        const frequency = russianLetters.map(letter => (inputLettersAmount[letter] / messageLength) || 0); // Считаем частоту
+        const frequency = russianLetters.map(letter => (inputLettersAmount[letter] / messageLength)); // Считаем частоту
         let minValue = Infinity; // Находим минимальное значение
         let estimatedKey = 0; // Переменная для оцененного ключа
 
@@ -142,7 +146,7 @@ const App: React.FC = () => {
             let sum = 0; // Переменная для суммы квадратов отклонений
             for (let i = 0; i < frequency.length; i++) {
                 const currentIndex = (i + offset) % frequency.length; // Определяем текущий индекс
-                const expectedFrequency = lettersFrequency[russianLetters[i] as keyof typeof lettersFrequency] || 0; // Ожидаемая частота
+                const expectedFrequency = lettersFrequency[russianLetters[i] as keyof typeof lettersFrequency]; // Ожидаемая частота
                 sum += Math.pow(expectedFrequency - frequency[currentIndex], 2); // Сумма квадратов отклонений
             }
 
@@ -162,9 +166,9 @@ const App: React.FC = () => {
             const elementIndex = russianLetters.indexOf(char); // Находим индекс символа
             if (elementIndex !== -1) {
                 const newIndex = (elementIndex - estimatedKey + russianLetters.length) % russianLetters.length; // Рассчитываем новый индекс
-                result += russianLetters[newIndex].toUpperCase(); // Добавляем расшифрованный символ к результату
+                result += russianLetters[newIndex].toLowerCase(); // Добавляем расшифрованный символ к результату
             } else {
-                result += char.toUpperCase(); // Если символ не буква, добавляем его без изменений
+                result += char.toLowerCase(); // Если символ не буква, добавляем его без изменений
             }
             if ((i + 1) % 5 === 0) {
                 result += ' '; // Добавляем пробел каждые 5 символов
@@ -185,20 +189,13 @@ const App: React.FC = () => {
 
     // Обработчик изменения ключа
     const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-        const value = Number(e.target.value); // Получаем значение ключа как число
-        if (value >= 32) {
-            setKey('32'); // Если ключ больше или равен 32, устанавливаем его в 32
-        } else if (value <= 32 && value > 0) {
-            setKey(e.target.value); // Устанавливаем ключ в введенное значение
-        } else if (value <= 0) {
-            setKey('0'); // Если ключ меньше или равен 0, устанавливаем его в 0
-        }
+        setKey(e.target.value);
     }
 
     return (
         <div style={{ padding: '20px' }}>
             <h1>Шифр Цезаря</h1>
-            {error && <Alert message={error} type="error" showIcon />} {/* Показываем ошибку при необходимости */}
+            {error && <Alert message={error} type="error" showIcon />}
             <Input.TextArea
                 rows={4}
                 value={inputText}
