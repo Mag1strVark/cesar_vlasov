@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Input, Button, Alert } from 'antd';
+import { variant } from './const.ts'
 import './style.css'
 
 // Буквы русского алфавита
@@ -96,7 +97,7 @@ const App: React.FC = () => {
                     newIndex = (elementIndex + offset) % dictionaryLength;
                 } else {
                     // Расшифрование: сдвигаем индекс обратно
-                    newIndex = (elementIndex - offset + dictionaryLength) % dictionaryLength; 
+                    newIndex = (elementIndex - offset + dictionaryLength) % dictionaryLength;
                 }
                 result += usedDict[newIndex]; // Добавляем зашифрованный/расшифрованный символ к результату
             } else {
@@ -194,6 +195,12 @@ const App: React.FC = () => {
 
     return (
         <div style={{ padding: '20px' }}>
+            <h3>Варианты:</h3>
+            <div className='container'>
+                {variant.map((val) => (
+                    <Button onClick={() => setInputText(val.text)}>{val.key}</Button>
+                ))}
+            </div>
             <h1>Шифр Цезаря</h1>
             {error && <Alert message={error} type="error" showIcon />}
             <Input.TextArea
