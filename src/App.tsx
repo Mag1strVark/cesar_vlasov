@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input, Button, Alert } from 'antd';
 import { variant } from './const.ts'
@@ -47,10 +46,11 @@ const lettersFrequency = {
 
 const App: React.FC = () => {
     const [inputText, setInputText] = useState<string>(''); // Состояние для введенного текста
-    const [key, setKey] = useState<string>('0'); // Состояние для ключа шифрования/расшифрования
+    const [key, setKey] = useState<string>(''); // Состояние для ключа шифрования/расшифрования
     const [outputText, setOutputText] = useState<string>(''); // Состояние для результата операции
     const [hackKey, setHackKey] = useState<string>(''); // Состояние для оцененного ключа при взломе
     const [error, setError] = useState<string>(''); // Состояние для ошибок
+    const [keyError, setKeyError] = useState<string>(''); // Состояние для ошибок ключа
 
     // Функция для очистки текста: замена ё на е, удаление небуквенных символов, приведение к нижнему регистру
     const clearText = (text: string): string => {
@@ -65,16 +65,30 @@ const App: React.FC = () => {
         setInputText(e.target.value);
     };
 
-    const parseOffset = (key: string): string => {
-        const formatKey = key.match(/\-?\d+/g)
-        return formatKey ? formatKey.join('') : ''
+    // Функция для валидации ключа
+    const validateKey = (key: string): boolean => {
+        if (!/^\d+$/.test(key) && key.length) {
+            setKeyError('Ключ должен быть целым числом!');
+            return false;
+        }
+        setKeyError('');
+        return true;
     }
 
     // Функция для шифрования или расшифрования текста
     const encryptOrDecrypt = (isEncryption: boolean): void => {
+        if (!inputText.trim()) {
+            setError('Текст не должен быть пустым!'); // Устанавливаем ошибку, если текст пустой
+            return;
+        }
+        if (!key.length) {
+            setError('Ключ не должен быть пустым!');
+            return;
+        }
+        if (!validateKey(key)) return; // Проверяем валидность ключа перед выполнением операции
         const cleanedText = clearText(inputText); // Берем очищенный текст
-        const formatKey = Number(parseOffset(key))
-        const offset = ((formatKey % 33) + 33) % 33
+        const formatKey = Number(key);
+        const offset = ((formatKey % 33) + 33) % 33;
         if (offset === -1) {
             return;
         }
@@ -112,10 +126,10 @@ const App: React.FC = () => {
         setError(''); // Сбрасываем ошибки
     };
 
-    // Функция для взлома шифра
+// Функция для взлома шифра
     const hackCipher = (): void => {
         const cleanedText = clearText(inputText); // Берем очищенный текст
-        if (cleanedText.length === 0) {
+        if (!cleanedText.trim()) {
             setError('Текст слишком короткий для взлома!'); // Устанавливаем ошибку, если текст пустой
             return;
         }
@@ -186,11 +200,13 @@ const App: React.FC = () => {
         setOutputText(''); // Очищаем результат
         setHackKey(''); // Очищаем оцененный ключ
         setError(''); // Сбрасываем ошибки
+        setKeyError(''); // Сбрасываем ошибки ключа
     };
 
     // Обработчик изменения ключа
     const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
         setKey(e.target.value);
+        validateKey(e.target.value); // Проверяем валидность ключа при изменении
     }
 
     return (
@@ -210,18 +226,16 @@ const App: React.FC = () => {
                 placeholder="Введите текст"
                 style={{ marginBottom: '10px' }}
             />
+            {keyError && <Alert message={keyError} type="error" showIcon />}
             <Input
-                type="number"
-                min={0}
-                max={32}
                 value={key}
                 onChange={handleKeyChange}
                 placeholder="Введите ключ"
                 style={{ marginBottom: '10px' }}
             />
             <div className='container'>
-                <Button type="primary" onClick={() => encryptOrDecrypt(true)}>Зашифровать</Button>
-                <Button onClick={() => encryptOrDecrypt(false)}>Расшифровать</Button>
+                <Button disabled={!!keyError} type="primary" onClick={() => encryptOrDecrypt(true)}>Зашифровать</Button>
+                <Button disabled={!!keyError} onClick={() => encryptOrDecrypt(false)}>Расшифровать</Button>
                 <Button onClick={hackCipher}>Взломать</Button>
                 <Button onClick={clearFields}>Очистить</Button>
             </div>
