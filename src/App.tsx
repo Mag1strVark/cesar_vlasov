@@ -44,13 +44,64 @@ const lettersFrequency = {
     'я': 0.018
 };
 
+interface IState {
+
+    /**
+     * Состояние для введенного текста
+     */
+    inputText: string;
+
+    /**
+     *  Состояние для ключа шифрования/расшифрования
+     */
+    key: string;
+
+    /**
+     * Состояние для результата операции
+     */
+    outputText: string;
+
+    /**
+     * Состояние для оцененного ключа при взломе
+     */
+    hackKey: string;
+
+    /**
+     * Состояние для ошибок
+     */
+    error: string;
+
+    /**
+     * Состояние для ошибок ключа
+     */
+    keyError: string;
+}
+
+type IStateName = keyof IState;
+type IStateValue = IState[IStateName];
+
+const generateEmptyValue = (): IState => ({
+    outputText: '',
+    inputText: '',
+    keyError: '',
+    hackKey: '',
+    error: '',
+    key: ''
+})
+
 const App: React.FC = () => {
-    const [inputText, setInputText] = useState<string>(''); // Состояние для введенного текста
-    const [key, setKey] = useState<string>(''); // Состояние для ключа шифрования/расшифрования
-    const [outputText, setOutputText] = useState<string>(''); // Состояние для результата операции
-    const [hackKey, setHackKey] = useState<string>(''); // Состояние для оцененного ключа при взломе
-    const [error, setError] = useState<string>(''); // Состояние для ошибок
-    const [keyError, setKeyError] = useState<string>(''); // Состояние для ошибок ключа
+    const [state, setState] = useState<IState>({
+        outputText: '',
+        inputText: '',
+        keyError: '',
+        hackKey: '',
+        error: '',
+        key: ''
+    })
+
+    const handleChange = (value: IStateValue, name: IStateName): void => {
+        setState((prevState) => ({ ...prevState, [name]: value }));
+    }
 
     // Функция для очистки текста: замена ё на е, удаление небуквенных символов, приведение к нижнему регистру
     const clearText = (text: string): string => {
@@ -62,56 +113,53 @@ const App: React.FC = () => {
 
     // Обработчик изменения текста в поле ввода
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-        setInputText(e.target.value);
+        handleChange(e.target.value, 'inputText')
     };
 
     // Функция для валидации ключа
     const validateKey = (key: string): boolean => {
-        if (!/^\d+$/.test(key) && key.length) {
-            setKeyError('Ключ должен быть целым числом!');
+        // Проверяем, является ли ключ целым числом (включая отрицательные числа)
+        if (!/^-?\d+$/.test(key) && key.length) {
+            handleChange('Ключ должен быть целым числом!', 'keyError')
             return false;
         }
-        setKeyError('');
+        handleChange('', 'keyError')
         return true;
     }
 
     // Функция для шифрования или расшифрования текста
     const encryptOrDecrypt = (isEncryption: boolean): void => {
-        if (!inputText.trim()) {
-            setError('Текст не должен быть пустым!'); // Устанавливаем ошибку, если текст пустой
+        if (!state.inputText.trim()) {
+            handleChange('Текст не должен быть пустым!', 'error')
             return;
         }
-        if (!key.length) {
-            setError('Ключ не должен быть пустым!');
+        if (!state.key.length) {
+            handleChange('Текст не должен быть пустым!', 'error')
             return;
         }
-        if (!validateKey(key)) return; // Проверяем валидность ключа перед выполнением операции
-        const cleanedText = clearText(inputText); // Берем очищенный текст
-        const formatKey = Number(key);
-        const offset = ((formatKey % 33) + 33) % 33;
-        if (offset === -1) {
-            return;
-        }
-        let result = ''; // Переменная для хранения результата
+        if (!validateKey(state.key)) return;
+
+        const cleanedText = clearText(state.inputText);
+        const formatKey = Number(state.key);
+        let result = '';
 
         // Проходим по каждому символу текста
         for (let i = 0; i < cleanedText.length; i++) {
-            const char = cleanedText[i]; // Берем текущий символ
-            const isRussian = russianLetters.includes(char); // Проверяем, является ли символ русским
-            const isEnglish = englishLetters.includes(char); // Проверяем, является ли символ английским
-            const usedDict = isRussian ? russianLetters : isEnglish ? englishLetters : []; // Выбор алфавита
-            const dictionaryLength = usedDict.length; // Длина алфавита
+            const char = cleanedText[i];
+            const isRussian = russianLetters.includes(char);
+            const isEnglish = englishLetters.includes(char);
+            const usedDict = isRussian ? russianLetters : isEnglish ? englishLetters : [];
+            const dictionaryLength = usedDict.length;
 
-            // Если символ принадлежит выбранному алфавиту
             if (usedDict.length > 0) {
-                const elementIndex = usedDict.indexOf(char); // Находим индекс символа в алфавите
+                const elementIndex = usedDict.indexOf(char);
+                const offset = ((formatKey % dictionaryLength) + dictionaryLength) % dictionaryLength; // Используем длину выбранного алфавита
                 let newIndex;
+
                 if (isEncryption) {
-                    // Шифрование: сдвигаем индекс по алфавиту
-                    newIndex = (elementIndex + offset) % dictionaryLength;
+                    newIndex = (elementIndex + offset) % dictionaryLength; // Шифрование
                 } else {
-                    // Расшифрование: сдвигаем индекс обратно
-                    newIndex = (elementIndex - offset + dictionaryLength) % dictionaryLength;
+                    newIndex = (elementIndex - offset + dictionaryLength) % dictionaryLength; // Расшифрование
                 }
                 result += usedDict[newIndex]; // Добавляем зашифрованный/расшифрованный символ к результату
             } else {
@@ -122,21 +170,21 @@ const App: React.FC = () => {
             }
         }
 
-        setOutputText(result.trim()); // Устанавливаем результат
-        setError(''); // Сбрасываем ошибки
+        handleChange(result.trim(), 'outputText')
+        handleChange('', 'error')
     };
 
-// Функция для взлома шифра
+    // Функция для взлома шифра
     const hackCipher = (): void => {
-        const cleanedText = clearText(inputText); // Берем очищенный текст
+        const cleanedText = clearText(state.inputText); // Берем очищенный текст
         if (!cleanedText.trim()) {
-            setError('Текст слишком короткий для взлома!'); // Устанавливаем ошибку, если текст пустой
+            handleChange('Текст слишком короткий для взлома!', 'error')
             return;
         }
 
         // Проверяем на наличие английских букв
         if (englishLetters.some(letter => cleanedText.includes(letter))) {
-            setError('Нельзя взламывать текст, содержащий английские буквы!'); // Если английская буква найдена, устанавливаем ошибку
+            handleChange('Нельзя взламывать текст, содержащий английские буквы!', 'error')
             return;
         }
 
@@ -151,7 +199,7 @@ const App: React.FC = () => {
             }
         }
 
-        // Подсчитываем частоту букв в введенном тексте
+        // Подсчитываем частоту букв во введенном тексте
         const frequency = russianLetters.map(letter => (inputLettersAmount[letter] / messageLength)); // Считаем частоту
         let minValue = Infinity; // Находим минимальное значение
         let estimatedKey = 0; // Переменная для оцененного ключа
@@ -172,7 +220,7 @@ const App: React.FC = () => {
             }
         }
 
-        setHackKey(estimatedKey.toString()); // Устанавливаем оцененный ключ
+        handleChange(estimatedKey.toString(), 'hackKey') // Устанавливаем оцененный ключ
 
         let result = '';
         // Расшифровка текста с оцененным ключом
@@ -190,23 +238,19 @@ const App: React.FC = () => {
             }
         }
 
-        setOutputText(result.trim()); // Устанавливаем результат
+        handleChange(result.trim(), 'outputText') // Устанавливаем результат
     };
 
     // Функция для очистки полей ввода
     const clearFields = () => {
-        setInputText(''); // Очищаем текст ввода
-        setKey(''); // Очищаем ключ
-        setOutputText(''); // Очищаем результат
-        setHackKey(''); // Очищаем оцененный ключ
-        setError(''); // Сбрасываем ошибки
-        setKeyError(''); // Сбрасываем ошибки ключа
+        setState(generateEmptyValue());
     };
 
     // Обработчик изменения ключа
     const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-        setKey(e.target.value);
-        validateKey(e.target.value); // Проверяем валидность ключа при изменении
+        const newKey = e.target.value; // Сохраняем новое значение ключа
+        handleChange(newKey, 'key'); // Обновляем состояние ключа
+        validateKey(newKey); // Проверяем валидность ключа при изменении
     }
 
     return (
@@ -214,40 +258,40 @@ const App: React.FC = () => {
             <h3>Варианты:</h3>
             <div className='container'>
                 {variant.map((val) => (
-                    <Button onClick={() => setInputText(val.text)}>{val.key}</Button>
+                    <Button onClick={() => handleChange(val.text, 'inputText')}>{val.key}</Button>
                 ))}
             </div>
             <h1>Шифр Цезаря</h1>
-            {error && <Alert message={error} type="error" showIcon />}
+            {state.error && <Alert message={state.error} type="error" showIcon />}
             <Input.TextArea
                 rows={4}
-                value={inputText}
+                value={state.inputText}
                 onChange={handleInputChange}
                 placeholder="Введите текст"
                 style={{ marginBottom: '10px' }}
             />
-            {keyError && <Alert message={keyError} type="error" showIcon />}
+            {state.keyError && <Alert message={state.keyError} type="error" showIcon />}
             <Input
-                value={key}
+                value={state.key}
                 onChange={handleKeyChange}
                 placeholder="Введите ключ"
                 style={{ marginBottom: '10px' }}
             />
             <div className='container'>
-                <Button disabled={!!keyError} type="primary" onClick={() => encryptOrDecrypt(true)}>Зашифровать</Button>
-                <Button disabled={!!keyError} onClick={() => encryptOrDecrypt(false)}>Расшифровать</Button>
+                <Button disabled={!!state.keyError} type="primary" onClick={() => encryptOrDecrypt(true)}>Зашифровать</Button>
+                <Button disabled={!!state.keyError} onClick={() => encryptOrDecrypt(false)}>Расшифровать</Button>
                 <Button onClick={hackCipher}>Взломать</Button>
                 <Button onClick={clearFields}>Очистить</Button>
             </div>
             <h3>Результат:</h3>
             <Input.TextArea
                 rows={4}
-                value={outputText}
+                value={state.outputText}
                 readOnly
                 style={{ marginBottom: '10px' }}
             />
             <h3>Оценённый ключ:</h3>
-            <Input value={hackKey} readOnly />
+            <Input value={state.hackKey} readOnly />
         </div>
     );
 };
