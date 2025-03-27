@@ -176,6 +176,7 @@ const App: React.FC = () => {
 
     // Функция для взлома шифра
     const hackCipher = (): void => {
+        handleChange('', 'error')
         const cleanedText = clearText(state.inputText); // Берем очищенный текст
         if (!cleanedText.trim()) {
             handleChange('Текст слишком короткий для взлома!', 'error')
